@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AGCD EDC — Fortran SI vs Python OI: Monthly Comparison Maps (2025)</title>
+<style>
+  body{font-family:system-ui,"Segoe UI",Arial,sans-serif;margin:2rem auto;max-width:920px;
+       color:#222;line-height:1.55;padding:0 1.1rem}
+  h1{font-size:1.55rem;margin-bottom:.2rem}
+  h2{font-size:1.15rem;margin-top:2rem;border-bottom:2px solid #eee;padding-bottom:.3rem}
+  p.note{color:#555;font-size:.95rem}
+  .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:.55rem;margin:.6rem 0 1.4rem}
+  .grid a{display:block;text-align:center;padding:.65rem .2rem;background:#f4f6f8;
+          border:1px solid #dde;border-radius:7px;text-decoration:none;color:#1558b0;font-weight:600}
+  .grid a:hover{background:#e7eefc}
+  code{background:#f4f6f8;padding:.1rem .35rem;border-radius:4px;font-size:.9em}
+  footer{margin-top:2.6rem;color:#888;font-size:.85rem;border-top:1px solid #eee;padding-top:.8rem}
+  @media(max-width:560px){.grid{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<h1>AGCD EDC — Fortran SI vs Python OI</h1>
+<p class="note"><b>Monthly comparison maps, 2025.</b> Interactive 6-panel comparison of the operational
+Fortran statistical interpolation and the Python optimal-interpolation engine.
+Top row — station maps: observed value, Fortran (obs − grid), Python (obs − grid).
+Bottom row — Fortran rainfall, Python rainfall, and their difference.
+Hover a gauge for its values; scroll to zoom (all panels zoom together).</p>
+
+<p class="note">Two station-selection variants:<br>
+<b>No filter</b> — every Fortran <code>xdataobs</code> station + pseudo-obs fed straight to Python (no extra screening).<br>
+<b>Fortran filter</b> — Python with the replicated Fortran cross-validation (<code>xvaldt</code>) station screening applied.</p>
+
+<h2>No filter</h2>
+<div class="grid">
+  <a href="no_filter/202501.html">Jan</a><a href="no_filter/202502.html">Feb</a><a href="no_filter/202503.html">Mar</a>
+  <a href="no_filter/202504.html">Apr</a><a href="no_filter/202505.html">May</a><a href="no_filter/202506.html">Jun</a>
+  <a href="no_filter/202507.html">Jul</a><a href="no_filter/202508.html">Aug</a><a href="no_filter/202509.html">Sep</a>
+  <a href="no_filter/202510.html">Oct</a><a href="no_filter/202511.html">Nov</a><a href="no_filter/202512.html">Dec</a>
+</div>
+
+<h2>Fortran filter</h2>
+<div class="grid">
+  <a href="fortran_filter/202501.html">Jan</a><a href="fortran_filter/202502.html">Feb</a><a href="fortran_filter/202503.html">Mar</a>
+  <a href="fortran_filter/202504.html">Apr</a><a href="fortran_filter/202505.html">May</a><a href="fortran_filter/202506.html">Jun</a>
+  <a href="fortran_filter/202507.html">Jul</a><a href="fortran_filter/202508.html">Aug</a><a href="fortran_filter/202509.html">Sep</a>
+  <a href="fortran_filter/202510.html">Oct</a><a href="fortran_filter/202511.html">Nov</a><a href="fortran_filter/202512.html">Dec</a>
+</div>
+
+<footer>Maps drawn at 0.05° for fast loading; hover popups report the native 0.01° grid value.
+Generated from the AGCD v2 Python SI comparison pipeline.</footer>
+</body>
+</html>
