@@ -27,9 +27,17 @@ Top row — station maps: observed value, Fortran (obs − grid), Python (obs �
 Bottom row — Fortran rainfall, Python rainfall, and their difference.
 Hover a gauge for its values; scroll to zoom (all panels zoom together).</p>
 
-<p class="note">Two station-selection variants:<br>
-<b>No filter</b> — every Fortran <code>xdataobs</code> station + pseudo-obs fed straight to Python (no extra screening).<br>
-<b>Fortran filter</b> — Python with the replicated Fortran cross-validation (<code>xvaldt</code>) station screening applied.</p>
+<p class="note">Three station-selection variants:<br>
+<b>No filter</b> — every real gauge fed straight to Python, no extra screening (all markers grey).<br>
+<b>Fortran filter</b> — Python with the replicated Fortran cross-validation (<code>xvaldt</code>) screening (PASS / REJECT).<br>
+<b>Python filter</b> — Python with the new station-QC class (boundary, climatology and spatial-neighbour tests): PASS / SUSPICIOUS / REJECT.</p>
+
+<p class="note"><b>Every gauge is shown</b>, including the ones a filter rejects. On the bottom row the station
+markers are coloured by QC status —
+<span style="color:#2ca02c;font-weight:600">● PASS</span>,
+<span style="color:#e8c400;font-weight:600">● SUSPICIOUS</span>,
+<span style="color:#d62728;font-weight:600">● REJECT</span>,
+<span style="color:#7f7f7f;font-weight:600">● none</span> — and every hover popup reports the gauge's QC status and flags.</p>
 
 <h2>No filter</h2>
 <div class="grid">
@@ -45,6 +53,14 @@ Hover a gauge for its values; scroll to zoom (all panels zoom together).</p>
   <a href="fortran_filter/202504.html">Apr</a><a href="fortran_filter/202505.html">May</a><a href="fortran_filter/202506.html">Jun</a>
   <a href="fortran_filter/202507.html">Jul</a><a href="fortran_filter/202508.html">Aug</a><a href="fortran_filter/202509.html">Sep</a>
   <a href="fortran_filter/202510.html">Oct</a><a href="fortran_filter/202511.html">Nov</a><a href="fortran_filter/202512.html">Dec</a>
+</div>
+
+<h2>Python filter</h2>
+<div class="grid">
+  <a href="station_qc/202501.html">Jan</a><a href="station_qc/202502.html">Feb</a><a href="station_qc/202503.html">Mar</a>
+  <a href="station_qc/202504.html">Apr</a><a href="station_qc/202505.html">May</a><a href="station_qc/202506.html">Jun</a>
+  <a href="station_qc/202507.html">Jul</a><a href="station_qc/202508.html">Aug</a><a href="station_qc/202509.html">Sep</a>
+  <a href="station_qc/202510.html">Oct</a><a href="station_qc/202511.html">Nov</a><a href="station_qc/202512.html">Dec</a>
 </div>
 
 <footer>Maps drawn at 0.05° for fast loading; hover popups report the native 0.01° grid value.
