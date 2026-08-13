@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AGCD — Fortran SI vs Python OI Comparison Maps (2025)</title>
+<style>
+  body{font-family:system-ui,"Segoe UI",Arial,sans-serif;margin:2rem auto;max-width:960px;
+       color:#222;line-height:1.55;padding:0 1.1rem}
+  h1{font-size:1.55rem;margin-bottom:.2rem}
+  h2{font-size:1.15rem;margin-top:2.2rem;border-bottom:2px solid #eee;padding-bottom:.3rem}
+  p.note{color:#555;font-size:.95rem}
+  .card{display:block;margin:.8rem 0;padding:.9rem 1.1rem;background:#f4f6f8;border:1px solid #dde;
+        border-radius:9px;text-decoration:none;color:inherit}
+  .card:hover{background:#e7eefc}
+  .card b{color:#1558b0;font-size:1.02rem}
+  .card span{display:block;color:#555;font-size:.9rem;margin-top:.25rem}
+  code{background:#f4f6f8;padding:.1rem .35rem;border-radius:4px;font-size:.9em}
+  footer{margin-top:2.6rem;color:#888;font-size:.85rem;border-top:1px solid #eee;padding-top:.8rem}
+</style>
+</head>
+<body>
+<h1>AGCD — Fortran SI vs Python OI</h1>
+<p class="note"><b>Interactive comparison maps for 2025.</b> Each run below opens a viewer where you
+pick the date; every map is a 6-panel comparison of the Fortran statistical interpolation
+and the Python optimal-interpolation engine.
+Top row — station maps: observed value, Fortran (obs &minus; grid), Python (obs &minus; grid).
+Bottom row — Fortran rainfall, Python rainfall, and their difference.
+Hover a gauge for its values (incl. its QC verdict); scroll to zoom (all panels zoom together).</p>
+
+<p class="note"><b>Every gauge is shown</b>, including the ones a QC step rejects. On the bottom row the
+station markers are coloured by QC status —
+<span style="color:#2ca02c;font-weight:600">&#9679; PASS</span>,
+<span style="color:#e8c400;font-weight:600">&#9679; SUSPICIOUS</span>,
+<span style="color:#d62728;font-weight:600">&#9679; REJECT</span>,
+<span style="color:#7f7f7f;font-weight:600">&#9679; none / pseudo</span> — and every hover popup
+reports the gauge's QC status and flags.</p>
+
+<h2>Monthly runs</h2>
+
+<a class="card" href="monthly_fortran_qc_off_python_qc_off/">
+  <b>Fortran QC disabled (operational) &nbsp;|&nbsp; Python QC disabled</b>
+  <span>Same inputs to both systems: observations, station normals, ACF, background-error
+  fields and climatology all come from one Fortran run, so the maps isolate the analysis
+  engines. The Fortran namelist is the operational one (rejpre&nbsp;=&nbsp;24,
+  rejxvl&nbsp;=&nbsp;20 — it rejects almost nothing) and the Python pre-filter is matched
+  at the same thresholds, so both sides are effectively unscreened.</span>
+</a>
+
+<a class="card" href="monthly_fortran_qc_on_python_qc_off/">
+  <b>Fortran QC enabled &nbsp;|&nbsp; Python QC disabled</b>
+  <span>The EDC archive Fortran run with its own cross-validation screening active
+  (rejpre&nbsp;=&nbsp;8, rejxvl&nbsp;=&nbsp;7), against Python fed every real gauge with no
+  screening at all.</span>
+</a>
+
+<a class="card" href="monthly_fortran_qc_on_python_qc_on/">
+  <b>Fortran QC enabled &nbsp;|&nbsp; Python QC enabled</b>
+  <span>The EDC archive Fortran run against Python with the station-QC class enabled
+  (boundary, range, climatology and cross-validation checks, th&nbsp;=&nbsp;7): each station is
+  hidden, predicted from its neighbours, and rejected when it disagrees by more than
+  7&nbsp;&times;&nbsp;the expected error — iteratively, worst station first, with a second
+  chance against the validated gauges.</span>
+</a>
+
+<h2>Daily runs</h2>
+
+<a class="card" href="daily_fortran_qc_off_python_qc_off/">
+  <b>Fortran QC disabled (operational) &nbsp;|&nbsp; Python QC disabled</b>
+  <span>The daily same-inputs comparison: both systems read the one daily Fortran run's
+  inputs, both sides effectively unscreened (operational thresholds). 365 days of 2025.</span>
+</a>
+
+<a class="card" href="daily_fortran_qc_on_python_qc_off/">
+  <b>Fortran QC enabled &nbsp;|&nbsp; Python QC disabled</b>
+  <span>The EDC archive daily Fortran run (own screening active) against Python fed every
+  real gauge unscreened. 365 days of 2025.</span>
+</a>
+
+<footer>Maps drawn at 0.05&deg; for fast loading; hover popups report
+the native 0.01&deg; grid value. Generated from the AGCD v2 Python SI comparison pipeline.</footer>
+</body>
+</html>

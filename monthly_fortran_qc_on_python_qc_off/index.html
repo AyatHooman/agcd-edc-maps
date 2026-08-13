@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monthly — Fortran QC enabled, Python QC disabled</title>
+<style>
+  body{font-family:system-ui,"Segoe UI",Arial,sans-serif;margin:0;color:#222;background:#fff}
+  header{padding:.7rem 1.2rem .5rem;border-bottom:1px solid #eee}
+  header h1{font-size:1.12rem;margin:0 0 .15rem}
+  header p{margin:.1rem 0;color:#555;font-size:.86rem;max-width:1100px}
+  header a.back{font-size:.85rem;color:#1558b0;text-decoration:none}
+  nav{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center;padding:.55rem 1.2rem;
+      border-bottom:1px solid #eee;background:#fafbfc}
+  nav button, nav input[type=date]{font:inherit;font-size:.88rem;padding:.32rem .6rem;
+      border:1px solid #ccd;border-radius:6px;background:#fff;cursor:pointer}
+  nav button:hover{background:#e7eefc}
+  nav button.active{background:#1558b0;color:#fff;border-color:#1558b0}
+  nav .count{color:#777;font-size:.82rem;margin-left:.4rem}
+  #status{padding:.6rem 1.2rem;color:#777;font-size:.9rem}
+  #wrap{overflow-x:auto;padding:0 .6rem .8rem}
+  footer{padding:.5rem 1.2rem 1rem;color:#888;font-size:.8rem}
+</style>
+<script src="../assets/plotly.min.js"></script>
+</head>
+<body>
+<header>
+  <a class="back" href="../">&larr; All runs</a>
+  <h1>Monthly — Fortran QC enabled, Python QC disabled</h1>
+  <p>EDC archive Fortran (own cross-validation screening active) vs Python fed every real gauge unscreened.</p>
+</header>
+<nav id="nav"></nav>
+<div id="status">Loading date list…</div>
+<div id="wrap"><div id="map"></div></div>
+<footer>Use the buttons / date picker or the &larr; &rarr; arrow keys. Scroll on a panel zooms
+all panels together; drag pans; hover a station for its values and QC verdict.</footer>
+<script>
+"use strict";
+const MODE = "monthly";
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+let DATES = [], current = -1;
+const $ = id => document.getElementById(id);
+
+function stemLabel(stem){
+  if (MODE === "monthly") return MONTHS[parseInt(stem.slice(4, 6), 10) - 1] + " " + stem.slice(0, 4);
+  return stem.slice(0, 4) + "-" + stem.slice(4, 6) + "-" + stem.slice(6, 8);
+}
+function isoOf(stem){ return stem.slice(0,4) + "-" + stem.slice(4,6) + "-" + (stem.length > 6 ? stem.slice(6,8) : "01"); }
+
+function buildNav(){
+  const nav = $("nav");
+  nav.innerHTML = "";
+  const prev = document.createElement("button");
+  prev.textContent = "\u2190 prev"; prev.onclick = () => go(current - 1); prev.id = "prev";
+  nav.appendChild(prev);
+  if (MODE === "monthly"){
+    DATES.forEach((stem, i) => {
+      const b = document.createElement("button");
+      b.textContent = stemLabel(stem); b.dataset.i = i; b.onclick = () => go(i);
+      nav.appendChild(b);
+    });
+  } else {
+    const inp = document.createElement("input");
+    inp.type = "date"; inp.id = "datepick";
+    inp.min = isoOf(DATES[0]); inp.max = isoOf(DATES[DATES.length - 1]);
+    inp.onchange = () => {
+      const stem = inp.value.replaceAll("-", "");
+      let best = 0, bestd = Infinity;
+      DATES.forEach((s, i) => { const d = Math.abs(parseInt(s) - parseInt(stem)); if (d < bestd){ bestd = d; best = i; } });
+      go(best);
+    };
+    nav.appendChild(inp);
+  }
+  const next = document.createElement("button");
+  next.textContent = "next \u2192"; next.onclick = () => go(current + 1); next.id = "next";
+  nav.appendChild(next);
+  const count = document.createElement("span");
+  count.className = "count"; count.id = "count";
+  nav.appendChild(count);
+}
+
+function markActive(){
+  document.querySelectorAll("nav button[data-i]").forEach(b =>
+    b.classList.toggle("active", parseInt(b.dataset.i) === current));
+  const inp = $("datepick");
+  if (inp) inp.value = isoOf(DATES[current]);
+  $("count").textContent = (current + 1) + " / " + DATES.length;
+  $("prev").disabled = current <= 0;
+  $("next").disabled = current >= DATES.length - 1;
+}
+
+function resolveShared(fig){
+  const shared = fig.shared || [];
+  const fix = (obj, key) => {
+    const v = obj && obj[key];
+    if (typeof v === "string" && v.startsWith("@@shared:")) obj[key] = shared[parseInt(v.slice(9))];
+  };
+  for (const tr of fig.data){
+    for (const k of ["x", "y", "z", "text"]) fix(tr, k);
+    if (tr.marker) fix(tr.marker, "color");
+  }
+}
+
+async function loadFig(stem){
+  const resp = await fetch("data/" + stem + ".json.gz");
+  if (!resp.ok) throw new Error("no map for " + stem + " (HTTP " + resp.status + ")");
+  const buf = await resp.arrayBuffer();
+  if (typeof DecompressionStream === "undefined")
+    throw new Error("This browser cannot decompress gzip (needs DecompressionStream).");
+  const ds = new DecompressionStream("gzip");
+  const text = await new Response(new Blob([buf]).stream().pipeThrough(ds)).text();
+  const fig = JSON.parse(text);
+  resolveShared(fig);
+  return fig;
+}
+
+let seq = 0, loadedStem = null;              // stem currently rendered OK (allows retry after a failed load)
+async function go(i){
+  if (i < 0 || i >= DATES.length) return;
+  if (i === current && loadedStem === DATES[i]) return;
+  current = i; markActive();
+  const stem = DATES[i], mySeq = ++seq;
+  history.replaceState(null, "", "#" + stem);
+  $("status").textContent = "Loading " + stemLabel(stem) + "\u2026";
+  try {
+    const fig = await loadFig(stem);
+    if (mySeq !== seq) return;                 // a newer request superseded this one
+    await Plotly.react("map", fig.data, fig.layout, fig.config || {});
+    loadedStem = stem;
+    $("status").textContent = "";
+  } catch (err){
+    if (mySeq === seq) $("status").textContent = "\u26a0 " + err.message + " \u2014 pick the date again to retry";
+  }
+}
+
+document.addEventListener("keydown", e => {
+  if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "SELECT")) return;
+  if (e.key === "ArrowLeft") go(current - 1);
+  if (e.key === "ArrowRight") go(current + 1);
+});
+
+fetch("dates.json").then(r => r.json()).then(dates => {
+  DATES = dates;
+  if (!DATES.length){ $("status").textContent = "No maps generated yet."; return; }
+  buildNav();
+  const want = location.hash.slice(1);
+  const i = DATES.indexOf(want);
+  go(i >= 0 ? i : 0);
+}).catch(() => { $("status").textContent = "Could not load dates.json"; });
+</script>
+</body>
+</html>
