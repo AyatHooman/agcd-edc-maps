@@ -8,36 +8,34 @@
   html,body{height:100%}
   body{font-family:system-ui,"Segoe UI",Arial,sans-serif;margin:0;color:#222;background:#fff;
        display:flex;flex-direction:column}
-  header{padding:.55rem 1.2rem .4rem;border-bottom:1px solid #eee;flex:0 0 auto}
-  header h1{font-size:1.05rem;margin:0 0 .1rem;display:inline}
-  header p{margin:.1rem 0 0;color:#555;font-size:.82rem;max-width:1200px}
-  header a.back{font-size:.85rem;color:#1558b0;text-decoration:none}
-  nav{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center;padding:.55rem 1.2rem;
-      border-bottom:1px solid #eee;background:#fafbfc}
-  nav button, nav input[type=date]{font:inherit;font-size:.88rem;padding:.32rem .6rem;
-      border:1px solid #ccd;border-radius:6px;background:#fff;cursor:pointer}
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem;
+         padding:.3rem .8rem;border-bottom:1px solid #eee;flex:0 0 auto}
+  header a.back{font-size:.82rem;color:#1558b0;text-decoration:none;white-space:nowrap}
+  header h1{font-size:.95rem;margin:0;white-space:nowrap;cursor:help}
+  header .sep{color:#ccc}
+  nav{display:contents}
+  nav button, nav input[type=date]{font:inherit;font-size:.8rem;padding:.18rem .45rem;
+      border:1px solid #ccd;border-radius:5px;background:#fff;cursor:pointer}
   nav button:hover{background:#e7eefc}
   nav button.active{background:#1558b0;color:#fff;border-color:#1558b0}
-  nav .count{color:#777;font-size:.82rem;margin-left:.4rem}
-  nav{flex:0 0 auto}
-  #status{padding:.3rem 1.2rem 0;color:#777;font-size:.85rem;flex:0 0 auto;min-height:1.1rem}
-  #wrap{flex:1 1 auto;overflow:auto;display:flex;justify-content:center;align-items:flex-start}
-  footer{padding:.25rem 1.2rem .4rem;color:#888;font-size:.76rem;flex:0 0 auto;
-         border-top:1px solid #f2f2f2}
+  nav button:disabled{opacity:.4;cursor:default}
+  .count{color:#777;font-size:.78rem;white-space:nowrap}
+  #wrap{flex:1 1 auto;overflow:auto;position:relative;
+        display:flex;justify-content:center;align-items:center}
+  #status{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:5;
+          color:#555;font-size:.85rem;background:#fffbe8;border:1px solid #eed;
+          border-radius:6px;padding:.2rem .7rem;display:none}
 </style>
 <script src="../assets/plotly.min.js"></script>
 </head>
 <body>
 <header>
-  <a class="back" href="../">&larr; All runs</a>
-  <h1>Monthly — Fortran QC disabled (operational), Python QC disabled</h1>
-  <p>Same inputs to both systems (one Fortran run feeds both); operational thresholds reject almost nothing, so both sides are effectively unscreened.</p>
+  <a class="back" href="../">&larr; All runs</a><span class="sep">|</span>
+  <h1 title="Same inputs to both systems (one Fortran run feeds both); operational thresholds reject almost nothing, so both sides are effectively unscreened.  Tips: scroll on a panel zooms all panels together; drag pans; hover a station for its values and QC verdict; arrow keys change date.">Monthly — Fortran QC disabled (operational), Python QC disabled</h1>
+  <span class="sep">|</span>
+  <nav id="nav"></nav>
 </header>
-<nav id="nav"></nav>
-<div id="status">Loading date list…</div>
-<div id="wrap"><div id="map"></div></div>
-<footer>Use the buttons / date picker or the &larr; &rarr; arrow keys. Scroll on a panel zooms
-all panels together; drag pans; hover a station for its values and QC verdict.</footer>
+<div id="wrap"><div id="status"></div><div id="map"></div></div>
 <script>
 "use strict";
 const MODE = "monthly";
@@ -51,16 +49,24 @@ function stemLabel(stem){
 }
 function isoOf(stem){ return stem.slice(0,4) + "-" + stem.slice(4,6) + "-" + (stem.length > 6 ? stem.slice(6,8) : "01"); }
 
+function setStatus(msg){
+  const el = $("status");
+  el.textContent = msg || "";
+  el.style.display = msg ? "block" : "none";
+}
+
 function buildNav(){
   const nav = $("nav");
   nav.innerHTML = "";
   const prev = document.createElement("button");
-  prev.textContent = "\u2190 prev"; prev.onclick = () => go(current - 1); prev.id = "prev";
+  prev.textContent = "←"; prev.title = "previous (left arrow)";
+  prev.onclick = () => go(current - 1); prev.id = "prev";
   nav.appendChild(prev);
   if (MODE === "monthly"){
     DATES.forEach((stem, i) => {
       const b = document.createElement("button");
-      b.textContent = stemLabel(stem); b.dataset.i = i; b.onclick = () => go(i);
+      b.textContent = MONTHS[parseInt(stem.slice(4, 6), 10) - 1];
+      b.dataset.i = i; b.onclick = () => go(i);
       nav.appendChild(b);
     });
   } else {
@@ -76,7 +82,8 @@ function buildNav(){
     nav.appendChild(inp);
   }
   const next = document.createElement("button");
-  next.textContent = "next \u2192"; next.onclick = () => go(current + 1); next.id = "next";
+  next.textContent = "→"; next.title = "next (right arrow)";
+  next.onclick = () => go(current + 1); next.id = "next";
   nav.appendChild(next);
   const count = document.createElement("span");
   count.className = "count"; count.id = "count";
@@ -118,22 +125,47 @@ async function loadFig(stem){
   return fig;
 }
 
-// Scale the whole figure (authored at 1500x980) to fill the space left under the
-// header/nav, preserving its aspect ratio, so the page never needs scrollbars.
+// ---- fit + restyle: scale the whole figure to the free space, and scale its
+// fonts, margins and colorbars with it so nothing overlaps at small sizes ----
 let baseW = 1500, baseH = 980;
+
 function fittedSize(){
   const wrap = $("wrap");
-  const availW = Math.max(100, wrap.clientWidth - 10);
-  const availH = Math.max(100, wrap.clientHeight - 8);
+  const availW = Math.max(100, wrap.clientWidth - 4);
+  const availH = Math.max(100, wrap.clientHeight - 4);
   const s = Math.min(availW / baseW, availH / baseH);
   const w = Math.max(640, Math.round(baseW * s));       // floor: below this, allow scrolling
   return { width: w, height: Math.round(baseH * w / baseW) };
 }
-let resizeTimer = null;
+
+function restyle(fig){
+  const size = fittedSize();
+  const s = size.width / baseW;
+  const L = fig.layout;
+  L.width = size.width; L.height = size.height;
+  L.title = undefined;                                   // the header already names run + date
+  L.margin = { l: Math.round(58 * s) + 6, r: Math.round(88 * s) + 6,
+               t: Math.round(26 * s) + 4, b: Math.round(84 * s) + 6 };
+  const fs = m => Math.max(7, Math.round(m * s));
+  L.font = Object.assign({}, L.font, { size: fs(12.5) });
+  (L.annotations || []).forEach(a => {
+    a.font = Object.assign({}, a.font, { size: fs(13.5) });
+  });
+  for (const tr of fig.data){
+    const cb = tr.colorbar || (tr.marker && tr.marker.colorbar);
+    if (!cb) continue;
+    cb.thickness = Math.max(6, Math.round(13 * s));
+    cb.tickfont = Object.assign({}, cb.tickfont, { size: fs(10.5) });
+    if (cb.title) cb.title.font = Object.assign({}, cb.title.font || {}, { size: fs(10.5) });
+  }
+  return fig;
+}
+
+let lastFig = null, resizeTimer = null;
 window.addEventListener("resize", () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
-    if (current >= 0 && $("map").data) Plotly.relayout("map", fittedSize());
+    if (lastFig) Plotly.react("map", lastFig.data, restyle(lastFig).layout, lastFig.config || {});
   }, 150);
 });
 
@@ -144,18 +176,19 @@ async function go(i){
   current = i; markActive();
   const stem = DATES[i], mySeq = ++seq;
   history.replaceState(null, "", "#" + stem);
-  $("status").textContent = "Loading " + stemLabel(stem) + "\u2026";
+  setStatus("Loading " + stemLabel(stem) + "…");
   try {
     const fig = await loadFig(stem);
     if (mySeq !== seq) return;                 // a newer request superseded this one
     if (fig.layout.width)  baseW = fig.layout.width;
     if (fig.layout.height) baseH = fig.layout.height;
-    Object.assign(fig.layout, fittedSize());
-    await Plotly.react("map", fig.data, fig.layout, fig.config || {});
+    await Plotly.react("map", fig.data, restyle(fig).layout, fig.config || {});
+    lastFig = fig;
     loadedStem = stem;
-    $("status").textContent = "";
+    document.title = "Monthly — Fortran QC disabled (operational), Python QC disabled — " + stemLabel(stem);
+    setStatus("");
   } catch (err){
-    if (mySeq === seq) $("status").textContent = "\u26a0 " + err.message + " \u2014 pick the date again to retry";
+    if (mySeq === seq) setStatus("⚠ " + err.message + " — pick the date again to retry");
   }
 }
 
@@ -167,12 +200,12 @@ document.addEventListener("keydown", e => {
 
 fetch("dates.json").then(r => r.json()).then(dates => {
   DATES = dates;
-  if (!DATES.length){ $("status").textContent = "No maps generated yet."; return; }
+  if (!DATES.length){ setStatus("No maps generated yet."); return; }
   buildNav();
   const want = location.hash.slice(1);
   const i = DATES.indexOf(want);
   go(i >= 0 ? i : 0);
-}).catch(() => { $("status").textContent = "Could not load dates.json"; });
+}).catch(() => { setStatus("Could not load dates.json"); });
 </script>
 </body>
 </html>
