@@ -5,10 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Monthly — Fortran QC enabled, Python QC enabled</title>
 <style>
-  body{font-family:system-ui,"Segoe UI",Arial,sans-serif;margin:0;color:#222;background:#fff}
-  header{padding:.7rem 1.2rem .5rem;border-bottom:1px solid #eee}
-  header h1{font-size:1.12rem;margin:0 0 .15rem}
-  header p{margin:.1rem 0;color:#555;font-size:.86rem;max-width:1100px}
+  html,body{height:100%}
+  body{font-family:system-ui,"Segoe UI",Arial,sans-serif;margin:0;color:#222;background:#fff;
+       display:flex;flex-direction:column}
+  header{padding:.55rem 1.2rem .4rem;border-bottom:1px solid #eee;flex:0 0 auto}
+  header h1{font-size:1.05rem;margin:0 0 .1rem;display:inline}
+  header p{margin:.1rem 0 0;color:#555;font-size:.82rem;max-width:1200px}
   header a.back{font-size:.85rem;color:#1558b0;text-decoration:none}
   nav{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center;padding:.55rem 1.2rem;
       border-bottom:1px solid #eee;background:#fafbfc}
@@ -17,9 +19,11 @@
   nav button:hover{background:#e7eefc}
   nav button.active{background:#1558b0;color:#fff;border-color:#1558b0}
   nav .count{color:#777;font-size:.82rem;margin-left:.4rem}
-  #status{padding:.6rem 1.2rem;color:#777;font-size:.9rem}
-  #wrap{overflow-x:auto;padding:0 .6rem .8rem}
-  footer{padding:.5rem 1.2rem 1rem;color:#888;font-size:.8rem}
+  nav{flex:0 0 auto}
+  #status{padding:.3rem 1.2rem 0;color:#777;font-size:.85rem;flex:0 0 auto;min-height:1.1rem}
+  #wrap{flex:1 1 auto;overflow:auto;display:flex;justify-content:center;align-items:flex-start}
+  footer{padding:.25rem 1.2rem .4rem;color:#888;font-size:.76rem;flex:0 0 auto;
+         border-top:1px solid #f2f2f2}
 </style>
 <script src="../assets/plotly.min.js"></script>
 </head>
@@ -114,6 +118,25 @@ async function loadFig(stem){
   return fig;
 }
 
+// Scale the whole figure (authored at 1500x980) to fill the space left under the
+// header/nav, preserving its aspect ratio, so the page never needs scrollbars.
+let baseW = 1500, baseH = 980;
+function fittedSize(){
+  const wrap = $("wrap");
+  const availW = Math.max(100, wrap.clientWidth - 10);
+  const availH = Math.max(100, wrap.clientHeight - 8);
+  const s = Math.min(availW / baseW, availH / baseH);
+  const w = Math.max(640, Math.round(baseW * s));       // floor: below this, allow scrolling
+  return { width: w, height: Math.round(baseH * w / baseW) };
+}
+let resizeTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (current >= 0 && $("map").data) Plotly.relayout("map", fittedSize());
+  }, 150);
+});
+
 let seq = 0, loadedStem = null;              // stem currently rendered OK (allows retry after a failed load)
 async function go(i){
   if (i < 0 || i >= DATES.length) return;
@@ -125,6 +148,9 @@ async function go(i){
   try {
     const fig = await loadFig(stem);
     if (mySeq !== seq) return;                 // a newer request superseded this one
+    if (fig.layout.width)  baseW = fig.layout.width;
+    if (fig.layout.height) baseH = fig.layout.height;
+    Object.assign(fig.layout, fittedSize());
     await Plotly.react("map", fig.data, fig.layout, fig.config || {});
     loadedStem = stem;
     $("status").textContent = "";
